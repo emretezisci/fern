@@ -13,6 +13,7 @@ imports:
   webhooks: webhooks.yml
   websocket: websocket.yml
   publish: publish.yml
+  dynamic: dynamic/ir.yml
 
 types:
   IntermediateRepresentation:
@@ -60,6 +61,7 @@ types:
       readmeConfig: optional<ReadmeConfig>
       sourceConfig: optional<SourceConfig>
       publishConfig: optional<publish.PublishingConfig>
+      dynamic: optional<dynamic.DynamicIntermediateRepresentation>
 
   ReadmeConfig:
     docs: |

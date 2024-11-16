@@ -174,7 +174,10 @@ export async function generateIntermediateRepresentation({
         websocketChannels: {},
         readmeConfig: undefined,
         sourceConfig: undefined,
-        publishConfig: undefined
+        publishConfig: undefined,
+
+        // TODO: Use the DynamicIrConverter.
+        dynamic: undefined
     };
 
     const packageTreeGenerator = new PackageTreeGenerator();

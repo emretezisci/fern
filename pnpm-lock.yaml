@@ -598,6 +598,15 @@ importers:
 
   generators/go-v2/sdk:
     devDependencies:
+      '@fern-api/generator-commons':
+        specifier: workspace:*
+        version: link:../../commons
+      '@fern-api/go-dynamic-snippets':
+        specifier: workspace:*
+        version: link:../dynamic-snippets
+      '@fern-api/ir-sdk':
+        specifier: workspace:*
+        version: link:../../../packages/ir-sdk
       '@types/node':
         specifier: 18.7.18
         version: 18.7.18

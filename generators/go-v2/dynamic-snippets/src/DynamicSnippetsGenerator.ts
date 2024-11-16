@@ -77,7 +77,7 @@ export class DynamicSnippetsGenerator extends AbstractDynamicSnippetsGenerator<D
         );
     }
 
-    private buildCodeBlock({
+    public buildCodeBlock({
         endpoint,
         snippet
     }: {

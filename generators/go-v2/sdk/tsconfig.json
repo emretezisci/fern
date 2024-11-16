@@ -6,6 +6,7 @@
     { "path": "../../../packages/commons/core-utils" },
     { "path": "../../../packages/commons/fs-utils" },
     { "path": "../../commons" },
-    { "path": "../ast" }
+    { "path": "../ast" },
+    { "path": "../dynamic-snippets" }
   ]
 }
