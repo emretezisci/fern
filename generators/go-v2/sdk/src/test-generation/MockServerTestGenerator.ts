@@ -124,15 +124,15 @@ export class MockServerTestGenerator {
         // Exploded/comma seperated query parameters are not supported yet
         const snippetQueryParams: dynamic.Values | undefined = {};
         for (const entry of request.example.queryParameters) {
-            snippetQueryParams[entry.name.name.originalName] = entry.value;
+            snippetQueryParams[entry.name.wireValue] = entry.value;
         }
 
         const snippetHeaders: dynamic.Values | undefined = {};
         for (const entry of request.example.serviceHeaders) {
-            snippetHeaders[entry.name.name.originalName] = entry.value;
+            snippetHeaders[entry.name.wireValue] = entry.value;
         }
         for (const entry of request.example.endpointHeaders) {
-            snippetHeaders[entry.name.name.originalName] = entry.value;
+            snippetHeaders[entry.name.wireValue] = entry.value;
         }
 
         const snippetRequestBody: dynamic.EndpointSnippetResponse | unknown = request.example.request?.jsonExample;
