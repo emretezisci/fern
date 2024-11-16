@@ -43,7 +43,7 @@ export class MockServerTestGenerator {
         this.dynamicSnippetsGenerator = new DynamicSnippetsGenerator({ ir: dynamic, config });
     }
 
-    public generate(request: MockServerTestGenerator.Request): MockServerTestGenerator.Response {
+    public async generate(request: MockServerTestGenerator.Request): Promise<MockServerTestGenerator.Response> {
         // TODO: Generate the mock server tests.
         //
         // We'll need to do the following:
@@ -75,8 +75,81 @@ export class MockServerTestGenerator {
         //
         //    Check out https://github.com/fern-api/fern/blob/3314baa6622c6e8aec46a9617cef51ad18876811/generators/go-v2/dynamic-snippets/src/DynamicSnippetsGenerator.ts#L213
         //    which shows how we generate the `option.WithToken("<token>")` portion of the snippet.
+
+        const snippetLocation: dynamic.EndpointLocation = {
+            method: request.endpoint.method,
+            path: request.endpoint.path
+        };
+
+        // Auth not fully implemented
+        let snippetAuth: dynamic.AuthValues | undefined = undefined;
+        const scheme = this.ir.auth.schemes[0];
+        if (scheme != null) {
+            switch (scheme.type) {
+                case "bearer":
+                    snippetAuth = dynamic.AuthValues.bearer({
+                        token: "<token>"
+                    });
+                    break;
+                case "basic":
+                    snippetAuth = dynamic.AuthValues.basic({
+                        username: "<username>",
+                        password: "<password>"
+                    });
+                    break;
+                case "header":
+                    snippetAuth = dynamic.AuthValues.header({
+                        value: "<value>"
+                    });
+                    break;
+                case "oauth":
+                    // TODO: OAuth
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        const snippetPathParams: dynamic.Values | undefined = {};
+        for (const entry of request.example.rootPathParameters) {
+            snippetPathParams[entry.name.originalName] = entry.value;
+        }
+        for (const entry of request.example.servicePathParameters) {
+            snippetPathParams[entry.name.originalName] = entry.value;
+        }
+        for (const entry of request.example.endpointPathParameters) {
+            snippetPathParams[entry.name.originalName] = entry.value;
+        }
+
+        // Exploded/comma seperated query parameters are not supported yet
+        const snippetQueryParams: dynamic.Values | undefined = {};
+        for (const entry of request.example.queryParameters) {
+            snippetQueryParams[entry.name.name.originalName] = entry.value;
+        }
+
+        const snippetHeaders: dynamic.Values | undefined = {};
+        for (const entry of request.example.serviceHeaders) {
+            snippetHeaders[entry.name.name.originalName] = entry.value;
+        }
+        for (const entry of request.example.endpointHeaders) {
+            snippetHeaders[entry.name.name.originalName] = entry.value;
+        }
+
+        const snippetRequestBody: dynamic.EndpointSnippetResponse | unknown = request.example.request?.jsonExample;
+
+        const snippetRequest: dynamic.EndpointSnippetRequest = {
+            endpoint: snippetLocation,
+            auth: snippetAuth,
+            pathParameters: snippetPathParams,
+            queryParameters: snippetQueryParams,
+            headers: snippetHeaders,
+            requestBody: snippetRequestBody
+        };
+
+        const response = await this.dynamicSnippetsGenerator?.generateSnippet(snippetRequest);
+
         return {
-            snippet: ""
+            snippet: response?.snippet ?? ""
         };
     }
 }

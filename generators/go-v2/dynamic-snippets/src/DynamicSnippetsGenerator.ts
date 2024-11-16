@@ -77,7 +77,58 @@ export class DynamicSnippetsGenerator extends AbstractDynamicSnippetsGenerator<D
         );
     }
 
-    public buildCodeBlock({
+    public async generateSnippet(
+        request: DynamicSnippets.EndpointSnippetRequest
+    ): Promise<DynamicSnippets.EndpointSnippetResponse> {
+        // TODO: DRY this up - we shouldn't need to repeat this whole thing.
+        const endpoints = this.context.resolveEndpointLocationOrThrow(request.endpoint);
+        if (endpoints.length === 0) {
+            throw new Error(`No endpoints found that match "${request.endpoint.method} ${request.endpoint.path}"`);
+        }
+
+        let bestReporter: ErrorReporter | undefined;
+        let bestSnippet: string | undefined;
+        let err: Error | undefined;
+        for (const endpoint of endpoints) {
+            this.context.errors.reset();
+            try {
+                const code = this.buildCodeBlockBody({ endpoint, snippet: request });
+                const snippet = await code.toString({
+                    packageName: SNIPPET_PACKAGE_NAME,
+                    importPath: SNIPPET_IMPORT_PATH,
+                    rootImportPath: this.context.rootImportPath,
+                    customConfig: this.context.customConfig ?? {},
+                    formatter: this.formatter
+                });
+                if (this.context.errors.empty()) {
+                    return {
+                        snippet,
+                        errors: undefined
+                    };
+                }
+                if (bestReporter == null || bestReporter.size() > this.context.errors.size()) {
+                    bestReporter = this.context.errors.clone();
+                    bestSnippet = snippet;
+                }
+            } catch (error) {
+                if (err == null) {
+                    err = error as Error;
+                }
+            }
+        }
+        if (bestSnippet != null && bestReporter != null) {
+            return {
+                snippet: bestSnippet,
+                errors: bestReporter.toDynamicSnippetErrors()
+            };
+        }
+        throw (
+            err ??
+            new Error(`Failed to generate snippet for endpoint "${request.endpoint.method} ${request.endpoint.path}"`)
+        );
+    }
+
+    private buildCodeBlock({
         endpoint,
         snippet
     }: {
@@ -88,11 +139,21 @@ export class DynamicSnippetsGenerator extends AbstractDynamicSnippetsGenerator<D
             name: SNIPPET_FUNC_NAME,
             parameters: [],
             return_: [],
-            body: go.codeblock((writer) => {
-                writer.writeNode(this.constructClient({ endpoint, snippet }));
-                writer.writeLine();
-                writer.writeNode(this.callMethod({ endpoint, snippet }));
-            })
+            body: this.buildCodeBlockBody({ endpoint, snippet })
+        });
+    }
+
+    private buildCodeBlockBody({
+        endpoint,
+        snippet
+    }: {
+        endpoint: DynamicSnippets.Endpoint;
+        snippet: DynamicSnippets.EndpointSnippetRequest;
+    }): go.CodeBlock {
+        return go.codeblock((writer) => {
+            writer.writeNode(this.constructClient({ endpoint, snippet }));
+            writer.writeLine();
+            writer.writeNode(this.callMethod({ endpoint, snippet }));
         });
     }
 
