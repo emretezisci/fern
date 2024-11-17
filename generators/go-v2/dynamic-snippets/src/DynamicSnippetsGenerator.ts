@@ -77,9 +77,7 @@ export class DynamicSnippetsGenerator extends AbstractDynamicSnippetsGenerator<D
         );
     }
 
-    public async generateSnippet(
-        request: DynamicSnippets.EndpointSnippetRequest
-    ): Promise<DynamicSnippets.EndpointSnippetResponse> {
+    public async generateSnippet(request: DynamicSnippets.EndpointSnippetRequest): Promise<go.AstNode> {
         // TODO: DRY this up - we shouldn't need to repeat this whole thing.
         const endpoints = this.context.resolveEndpointLocationOrThrow(request.endpoint);
         if (endpoints.length === 0) {
@@ -149,7 +147,7 @@ export class DynamicSnippetsGenerator extends AbstractDynamicSnippetsGenerator<D
     }: {
         endpoint: DynamicSnippets.Endpoint;
         snippet: DynamicSnippets.EndpointSnippetRequest;
-    }): go.CodeBlock {
+    }): go.AstNode {
         return go.codeblock((writer) => {
             writer.writeNode(this.constructClient({ endpoint, snippet }));
             writer.writeLine();
