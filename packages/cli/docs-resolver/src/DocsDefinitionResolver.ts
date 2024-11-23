@@ -495,7 +495,7 @@ export class DocsDefinitionResolver {
                 return;
             }
 
-            if (child.type === "section" && !child.collapsed) {
+            if (child.type === "section" && child.collapsed !== true) {
                 grouped.push(child);
                 return;
             }
