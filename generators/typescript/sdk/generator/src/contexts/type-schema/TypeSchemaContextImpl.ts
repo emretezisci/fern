@@ -137,6 +137,9 @@ export class TypeSchemaContextImpl implements TypeSchemaContext {
     public getReferenceToRawNamedType(typeName: DeclaredTypeName): Reference {
         const typeDeclaration = this.typeResolver.getTypeDeclarationFromName(typeName);
         const isCircular = typeDeclaration.referencedTypes.has(typeName.typeId);
+        const isMatchingTypeName = Array.from(typeDeclaration.referencedTypes).some((typeId) => {
+            this.typeResolver.getTypeDeclarationFromId(typeId).name.name === typeName.name;
+        });
 
         return this.typeSchemaDeclarationReferencer.getReferenceToType({
             name: typeName,
@@ -146,7 +149,7 @@ export class TypeSchemaContextImpl implements TypeSchemaContext {
                       useDynamicImport: false,
                       namespaceImport: "serializers"
                   }
-                : { type: "direct", alias: `${typeName.name.originalName}Type` },
+                : { type: "direct", alias: isMatchingTypeName ? `${typeName.name.originalName}Type` : undefined },
             // TODO this should not be hardcoded here
             subImport: ["Raw"],
             importsManager: this.importsManager,
@@ -164,6 +167,9 @@ export class TypeSchemaContextImpl implements TypeSchemaContext {
     ): Zurg.Schema {
         const typeDeclaration = this.typeResolver.getTypeDeclarationFromName(typeName);
         const isCircular = typeDeclaration.referencedTypes.has(typeName.typeId);
+        const isMatchingTypeName = Array.from(typeDeclaration.referencedTypes).some((typeId) => {
+            this.typeResolver.getTypeDeclarationFromId(typeId).name.name === typeName.name;
+        });
 
         const referenceToSchema = this.typeSchemaDeclarationReferencer
             .getReferenceToType({
@@ -175,7 +181,10 @@ export class TypeSchemaContextImpl implements TypeSchemaContext {
                         return { type: "fromRoot", useDynamicImport: false, namespaceImport: "serializers" };
                     } else if (isGeneratingSchema) {
                         // Return default import strategy or another strategy based on your logic
-                        return { type: "direct", alias: `${typeName.name.originalName}Type` };
+                        return {
+                            type: "direct",
+                            alias: isMatchingTypeName ? `${typeName.name.originalName}Type` : undefined
+                        };
                     } else {
                         // We don't really know when or if this case is actually used
                         return getSchemaImportStrategy({ useDynamicImport: false });
