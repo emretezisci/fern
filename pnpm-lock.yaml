@@ -4432,6 +4432,12 @@ importers:
 
   packages/cli/docs-preview:
     dependencies:
+      '@fern-api/core-utils':
+        specifier: workspace:*
+        version: link:../../commons/core-utils
+      '@fern-api/docs-parsers':
+        specifier: ^0.0.10
+        version: 0.0.10(@types/node@18.7.18)(jsdom@20.0.3)(sass@1.72.0)(terser@5.31.5)(typescript@4.6.4)
       '@fern-api/docs-resolver':
         specifier: workspace:*
         version: link:../docs-resolver
@@ -4444,6 +4450,9 @@ importers:
       '@fern-api/ir-sdk':
         specifier: workspace:*
         version: link:../../ir-sdk
+      '@fern-api/lazy-fern-workspace':
+        specifier: workspace:*
+        version: link:../lazy-fern-workspace
       '@fern-api/logger':
         specifier: workspace:*
         version: link:../logger
@@ -4471,6 +4480,9 @@ importers:
       express:
         specifier: ^4.20.0
         version: 4.21.1
+      js-yaml:
+        specifier: ^4.1.0
+        version: 4.1.0
       readable-stream:
         specifier: ^4.5.2
         version: 4.5.2
@@ -4499,6 +4511,9 @@ importers:
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.21
+      '@types/js-yaml':
+        specifier: ^4.0.8
+        version: 4.0.8
       '@types/node':
         specifier: 18.7.18
         version: 18.7.18
@@ -4520,6 +4535,9 @@ importers:
       eslint:
         specifier: ^8.56.0
         version: 8.56.0
+      openapi-types:
+        specifier: ^12.1.3
+        version: 12.1.3
       organize-imports-cli:
         specifier: ^0.10.0
         version: 0.10.0
@@ -4559,6 +4577,9 @@ importers:
       '@fern-api/ir-sdk':
         specifier: workspace:*
         version: link:../../ir-sdk
+      '@fern-api/lazy-fern-workspace':
+        specifier: workspace:*
+        version: link:../lazy-fern-workspace
       '@fern-api/register':
         specifier: workspace:*
         version: link:../register
@@ -4584,6 +4605,9 @@ importers:
       '@fern-api/workspace-loader':
         specifier: workspace:*
         version: link:../workspace-loader
+      '@types/js-yaml':
+        specifier: ^4.0.8
+        version: 4.0.8
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
