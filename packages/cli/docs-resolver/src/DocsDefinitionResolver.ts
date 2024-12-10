@@ -6,7 +6,7 @@ import {
     replaceReferencedCode,
     replaceReferencedMarkdown
 } from "@fern-api/docs-markdown-utils";
-import { APIV1Write, DocsV1Write, FernNavigation } from "@fern-api/fdr-sdk";
+import { APIV1Read, APIV1Write, DocsV1Write, FernNavigation } from "@fern-api/fdr-sdk";
 import { AbsoluteFilePath, listFiles, relative, RelativeFilePath, relativize, resolve } from "@fern-api/fs-utils";
 import { generateIntermediateRepresentation } from "@fern-api/ir-generator";
 import { IntermediateRepresentation } from "@fern-api/ir-sdk";
@@ -26,6 +26,7 @@ import { convertIrToApiDefinition } from "./utils/convertIrToApiDefinition";
 import { collectFilesFromDocsConfig } from "./utils/getImageFilepathsToUpload";
 import { wrapWithHttps } from "./wrapWithHttps";
 import { SourceResolverImpl } from "@fern-api/cli-source-resolver";
+import { getAllOpenAPISpecs, OSSWorkspace } from "@fern-api/lazy-fern-workspace";
 
 dayjs.extend(utc);
 
@@ -70,7 +71,9 @@ export class DocsDefinitionResolver {
         // Optional
         private editThisPage?: docsYml.RawSchemas.EditThisPageConfig,
         private uploadFiles: UploadFilesFn = defaultUploadFiles,
-        private registerApi: RegisterApiFn = defaultRegisterApi
+        private registerApi: RegisterApiFn = defaultRegisterApi,
+        // TODO: remove this once the v2 converter is complete
+        private v2Converter?: { openApiDefinition: APIV1Read.ApiDefinition }
     ) {}
 
     #idgen = NodeIdGenerator.init();
@@ -543,27 +546,33 @@ export class DocsDefinitionResolver {
         parentSlug: FernNavigation.V1.SlugGenerator
     ): Promise<FernNavigation.V1.ApiReferenceNode> {
         const workspace = this.getFernWorkspaceForApiSection(item);
-        const snippetsConfig = convertDocsSnippetsConfigToFdr(item.snippetsConfiguration);
-        const ir = await generateIntermediateRepresentation({
-            workspace,
-            audiences: item.audiences,
-            generationLanguage: undefined,
-            keywords: undefined,
-            smartCasing: false,
-            disableExamples: false,
-            readme: undefined,
-            version: undefined,
-            packageName: undefined,
-            context: this.taskContext,
-            sourceResolver: new SourceResolverImpl(this.taskContext, workspace)
-        });
-        const apiDefinitionId = await this.registerApi({
-            ir,
-            snippetsConfig,
-            playgroundConfig: { oauth: item.playground?.oauth },
-            apiName: item.apiName
-        });
-        const api = convertIrToApiDefinition(ir, apiDefinitionId, { oauth: item.playground?.oauth });
+        let api: APIV1Read.ApiDefinition | undefined;
+        if (this.v2Converter) {
+            api = this.v2Converter.openApiDefinition;
+        } else {
+            const snippetsConfig = convertDocsSnippetsConfigToFdr(item.snippetsConfiguration);
+            const ir = await generateIntermediateRepresentation({
+                workspace,
+                audiences: item.audiences,
+                generationLanguage: undefined,
+                keywords: undefined,
+                smartCasing: false,
+                disableExamples: false,
+                readme: undefined,
+                version: undefined,
+                packageName: undefined,
+                context: this.taskContext,
+                sourceResolver: new SourceResolverImpl(this.taskContext, workspace)
+            });
+            const apiDefinitionId = await this.registerApi({
+                ir,
+                snippetsConfig,
+                playgroundConfig: { oauth: item.playground?.oauth },
+                apiName: item.apiName
+            });
+            api = convertIrToApiDefinition(ir, apiDefinitionId, { oauth: item.playground?.oauth });
+        }
+
         const node = new ApiReferenceNodeConverter(
             item,
             api,

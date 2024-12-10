@@ -22,11 +22,15 @@ import { v4 as uuidv4 } from "uuid";
 export async function getPreviewDocsDefinition({
     domain,
     project,
-    context
+    context,
+    // TODO: remove this once the v2 converter is complete
+    v2Converter
 }: {
     domain: string;
     project: Project;
     context: TaskContext;
+    // TODO: remove this once the v2 converter is complete
+    v2Converter?: { openApiDefinition: APIV1Read.ApiDefinition };
 }): Promise<DocsV1Read.DocsDefinition> {
     const docsWorkspace = project.docsWorkspaces;
     const apiWorkspaces = project.apiWorkspaces;
@@ -44,7 +48,7 @@ export async function getPreviewDocsDefinition({
         )
     );
 
-    const apiCollector = new ReferencedAPICollector(context);
+    const apiCollector = new ReferencedAPICollector(context, v2Converter);
 
     const filesV2: Record<string, DocsV1Read.File_> = {};
 
@@ -67,7 +71,8 @@ export async function getPreviewDocsDefinition({
                     fileId
                 };
             }),
-        async (opts) => apiCollector.addReferencedAPI(opts)
+        async (opts) => apiCollector.addReferencedAPI(opts),
+        v2Converter
     );
 
     const writeDocsDefinition = await resolver.resolve();
@@ -97,7 +102,17 @@ type APIDefinitionID = string;
 class ReferencedAPICollector {
     private readonly apis: Record<APIDefinitionID, APIV1Read.ApiDefinition> = {};
 
-    constructor(private readonly context: TaskContext) {}
+    constructor(
+        private readonly context: TaskContext,
+        // TODO: remove this once the v2 converter is complete
+        private readonly v2Converter?: { openApiDefinition: APIV1Read.ApiDefinition }
+    ) {
+        this.apis = v2Converter
+            ? {
+                  [uuidv4()]: v2Converter.openApiDefinition
+              }
+            : {};
+    }
 
     public addReferencedAPI({
         ir,
@@ -111,6 +126,7 @@ class ReferencedAPICollector {
         try {
             const id = uuidv4();
 
+            // TODO: add v2 converter logic here
             const dbApiDefinition = convertAPIDefinitionToDb(
                 convertIrToFdrApi({ ir, snippetsConfig, playgroundConfig }),
                 FdrAPI.ApiDefinitionId(id),

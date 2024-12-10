@@ -985,6 +985,11 @@ function addDocsPreviewCommand(cli: Argv<GlobalCliOptions>, cliContext: CliConte
                     string: true,
                     hidden: true,
                     description: "Path of the local docs bundle to use"
+                })
+                .option("v2", {
+                    boolean: true,
+                    hidden: true,
+                    description: "Use the v2 fdr conversion for docs preview server"
                 }),
         async (argv) => {
             let port: number;
@@ -1002,7 +1007,8 @@ function addDocsPreviewCommand(cli: Argv<GlobalCliOptions>, cliContext: CliConte
                     }),
                 cliContext,
                 port,
-                bundlePath
+                bundlePath,
+                v2Converter: argv.v2
             });
         }
     );

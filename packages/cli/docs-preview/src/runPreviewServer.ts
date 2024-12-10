@@ -1,5 +1,5 @@
 import { wrapWithHttps } from "@fern-api/docs-resolver";
-import { FernNavigation, DocsV1Read, DocsV2Read } from "@fern-api/fdr-sdk";
+import { FdrAPI, FernNavigation, DocsV1Read, DocsV2Read } from "@fern-api/fdr-sdk";
 import { dirname, doesPathExist, AbsoluteFilePath } from "@fern-api/fs-utils";
 import { Project } from "@fern-api/project-loader";
 import { TaskContext } from "@fern-api/task-context";
@@ -9,9 +9,18 @@ import express from "express";
 import http from "http";
 import path from "path";
 import Watcher from "watcher";
+import fs from "fs";
+import yaml from "js-yaml";
 import { WebSocketServer, type WebSocket } from "ws";
 import { downloadBundle, getPathToBundleFolder } from "./downloadLocalDocsBundle";
 import { getPreviewDocsDefinition } from "./previewDocs";
+import { getAllOpenAPISpecs } from "../../lazy-fern-workspace/src/utils/getAllOpenAPISpecs";
+import { BaseOpenApiV3_1ConverterNodeContext } from "@fern-api/docs-parsers";
+import { ErrorCollector } from "@fern-api/docs-parsers";
+import { OpenApiDocumentConverterNode } from "@fern-api/docs-parsers";
+import { convertToV1ApiDefinition } from "./utils/latestToV1ReadConverter";
+import type { OpenAPIV3_1 } from "openapi-types";
+import { OSSWorkspace } from "@fern-api/lazy-fern-workspace";
 
 const EMPTY_DOCS_DEFINITION: DocsV1Read.DocsDefinition = {
     pages: {},
@@ -54,7 +63,9 @@ export async function runPreviewServer({
     validateProject,
     context,
     port,
-    bundlePath
+    bundlePath,
+    // TODO: remove this once the v2 converter is complete
+    v2Converter
 }: {
     initialProject: Project;
     reloadProject: () => Promise<Project>;
@@ -62,6 +73,8 @@ export async function runPreviewServer({
     context: TaskContext;
     port: number;
     bundlePath?: string;
+    // TODO: remove this once the v2 converter is complete
+    v2Converter?: boolean;
 }): Promise<void> {
     if (bundlePath != null) {
         context.logger.info(`Using bundle from path: ${bundlePath}`);
@@ -121,14 +134,69 @@ export async function runPreviewServer({
     const reloadDocsDefinition = async () => {
         context.logger.info("Reloading docs...");
         const startTime = Date.now();
+
         try {
             project = await reloadProject();
             context.logger.info("Validating docs...");
             await validateProject(project);
+
+            // TODO: clean this up once the v2 converter is complete
+            let fdrApiDefinition: FdrAPI.api.latest.ApiDefinition | undefined;
+            if (v2Converter) {
+                const openApiSpecs = await getAllOpenAPISpecs({
+                    context,
+                    specs: project.apiWorkspaces.flatMap((workspace) =>
+                        workspace instanceof OSSWorkspace ? workspace.specs : []
+                    )
+                });
+
+                if (openApiSpecs.length === 0) {
+                    context.logger.error("No OpenAPI specs found in the workspace");
+                    return;
+                }
+
+                if (openApiSpecs.length > 1) {
+                    context.logger.error("Found multiple OpenAPI specs in the workspace.");
+                    return;
+                }
+
+                const openApi = openApiSpecs[0];
+
+                if (openApi != null) {
+                    const input = yaml.load(fs.readFileSync(openApi.absoluteFilepath, "utf8")) as OpenAPIV3_1.Document;
+
+                    const oasContext: BaseOpenApiV3_1ConverterNodeContext = {
+                        document: input,
+                        logger: context.logger,
+                        errors: new ErrorCollector()
+                    };
+
+                    const openApiFdrJson = new OpenApiDocumentConverterNode({
+                        input,
+                        context: oasContext,
+                        accessPath: [],
+                        pathId: "OpenAPI Parser"
+                    });
+
+                    if (openApiFdrJson.errors.length > 0) {
+                        context.logger.error("Failed to parse OpenAPI spec, rendering blank page.");
+                        return;
+                    }
+
+                    fdrApiDefinition = openApiFdrJson.convert();
+                }
+            }
+
             const newDocsDefinition = await getPreviewDocsDefinition({
                 domain: `${instance.host}${instance.pathname}`,
                 project,
-                context
+                context,
+                v2Converter:
+                    v2Converter && fdrApiDefinition != null
+                        ? {
+                              openApiDefinition: convertToV1ApiDefinition(fdrApiDefinition)
+                          }
+                        : undefined
             });
             context.logger.info(`Reload completed in ${Date.now() - startTime}ms`);
             return newDocsDefinition;

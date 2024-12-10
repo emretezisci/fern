@@ -8,12 +8,15 @@ export async function previewDocsWorkspace({
     loadProject,
     cliContext,
     port,
-    bundlePath
+    bundlePath,
+    v2Converter
 }: {
     loadProject: () => Promise<Project>;
     cliContext: CliContext;
     port: number;
     bundlePath?: string;
+    // TODO: Remove this once v2 converter is migrated
+    v2Converter?: boolean;
 }): Promise<void> {
     const project = await loadProject();
     const docsWorkspace = project.docsWorkspaces;
@@ -57,7 +60,8 @@ export async function previewDocsWorkspace({
             },
             context,
             port,
-            bundlePath
+            bundlePath,
+            v2Converter
         });
     });
 }
